@@ -1,8 +1,6 @@
 mod decode;
 mod encode;
 mod fixed_codec;
-#[cfg(test)]
-mod test;
 
 extern crate proc_macro;
 

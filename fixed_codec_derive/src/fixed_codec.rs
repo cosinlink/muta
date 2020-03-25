@@ -12,23 +12,33 @@ pub fn impl_fixed_codec(ast: syn::DeriveInput) -> TokenStream {
         panic!("#[derive(FixedCodec)] is only defined for structs.");
     };
 
+    let impl_encode = impl_encode(&name, body);
+    let impl_decode = impl_decode(&name, body);
+
     quote! {
-        impl_encode(&name, body);
-        impl_decode(&name, body);
+        const _: () = {
+            extern crate rlp;
+            extern crate protocol;
 
-        impl protocol::fixed_codec::FixedCodec for #name {
-            fn encode_fixed(&self) -> ProtocolResult<bytes::Bytes> {
-                Ok(bytes::Bytes::from(rlp::encode(&self)))
-            }
+            use protocol::{fixed_codec::{FixedCodec, FixedCodecError}, ProtocolResult, Bytes};
 
-            fn decode_fixed(bytes: bytes::Bytes) -> ProtocolResult<Self> {
-                Ok(rlp::decode(bytes.as_ref()).map_err(FixedCodecError::from)?)
+            #impl_encode
+            #impl_decode
+
+            impl FixedCodec for #name {
+                fn encode_fixed(&self) -> ProtocolResult<bytes::Bytes> {
+                    Ok(bytes::Bytes::from(rlp::encode(&self)))
+                }
+
+                fn decode_fixed(bytes: bytes::Bytes) -> ProtocolResult<Self> {
+                    Ok(rlp::decode(bytes.as_ref()).map_err(FixedCodecError::from)?)
+                }
             }
-        }
+        };
     }
 }
 
-fn impl_encode(name: &syn::Ident, body: syn::DataStruct) -> TokenStream {
+fn impl_encode(name: &syn::Ident, body: &syn::DataStruct) -> TokenStream {
     let stmts = body
         .fields
         .iter()
@@ -48,7 +58,7 @@ fn impl_encode(name: &syn::Ident, body: syn::DataStruct) -> TokenStream {
     }
 }
 
-pub fn impl_decode(name: &syn::Ident, body: syn::DataStruct) -> TokenStream {
+pub fn impl_decode(name: &syn::Ident, body: &syn::DataStruct) -> TokenStream {
     let stmts = body
         .fields
         .iter()

@@ -28,18 +28,21 @@ pub fn decode_field(index: usize, field: &syn::Field, quotes: ParseQuotes) -> To
     let list = quotes.list;
 
     match &field.ty {
-        syn::Type::Array(array) => {
-            let temp = quote! {
-                let bytes = bytes::Bytes::from(#single()?);
-                if bytes.len() != #id.len() {
-                    panic!("Length mismatch");
-                }
-                let mut out = [0u8; #id.len()];
-                out.copy_from_slice(&bytes);
-            };
-            quote! { #id: #temp, }
-        }
-
+        // FIXME
+        // syn::Type::Array(array) => {
+        //     let temp = quote! {
+        //         {
+        //             let bytes = bytes::Bytes::from(#single()?);
+        //             if bytes.len() != #id.len() {
+        //                 panic!("Length mismatch");
+        //             }
+        //             let mut out = [0u8; #id.len()];
+        //             out.copy_from_slice(&bytes);
+        //             out
+        //         }
+        //     };
+        //     quote! { #id: #temp, }
+        // }
         syn::Type::Path(path) => {
             let ident = &path
                 .path
@@ -56,10 +59,10 @@ pub fn decode_field(index: usize, field: &syn::Field, quotes: ParseQuotes) -> To
                 }
             } else if ident_type == "Bytes" {
                 if quotes.takes_index {
-                    let temp = quote! { #single(#index)?; };
+                    let temp = quote! { #single(#index)? };
                     quote! { #id: bytes::Bytes::from(#temp), }
                 } else {
-                    let temp = quote! { #single()?; };
+                    let temp = quote! { #single()? };
                     quote! { #id: bytes::Bytes::from(#temp), }
                 }
             } else if quotes.takes_index {
@@ -68,7 +71,6 @@ pub fn decode_field(index: usize, field: &syn::Field, quotes: ParseQuotes) -> To
                 quote! { #id: #single()?, }
             }
         }
-
         _ => panic!("fixed_codec_derive not supported"),
     }
 }
