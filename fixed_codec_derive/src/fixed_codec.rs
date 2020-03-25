@@ -16,7 +16,7 @@ pub fn impl_fixed_codec(ast: syn::DeriveInput) -> TokenStream {
         impl_encode(&name, body);
         impl_decode(&name, body);
 
-        impl FixedCodec for #name {
+        impl protocol::fixed_codec::FixedCodec for #name {
             fn encode_fixed(&self) -> ProtocolResult<bytes::Bytes> {
                 Ok(bytes::Bytes::from(rlp::encode(&self)))
             }
