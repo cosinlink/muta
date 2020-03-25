@@ -18,6 +18,7 @@ core-consensus = { path = "./core/consensus" }
 
 binding-macro = { path = "./binding-macro" }
 framework = { path = "./framework" }
+fixed-codec-derive = { path = "./fixed_codec_derive"}
 
 actix-rt = "1.0"
 derive_more = "0.99"
