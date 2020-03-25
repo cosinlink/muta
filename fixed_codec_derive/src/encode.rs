@@ -12,8 +12,8 @@ pub fn encode_field(index: usize, field: &syn::Field) -> TokenStream {
     let id = quote! { self.#ident };
 
     match &field.ty {
-        syn::Type::Array(array) => {
-            let bytes = quote! { bytes::BytesMut::from(&id).freeze().as_ref().to_vec(); };
+        syn::Type::Array(_array) => {
+            let bytes = quote! { bytes::BytesMut::from(&id).freeze().as_ref().to_vec() };
             quote! { stream.append(&#bytes); }
         }
 
