@@ -29,20 +29,19 @@ pub fn decode_field(index: usize, field: &syn::Field, quotes: ParseQuotes) -> To
 
     match &field.ty {
         // FIXME
-        // syn::Type::Array(array) => {
-        //     let temp = quote! {
-        //         {
-        //             let bytes = bytes::Bytes::from(#single()?);
-        //             if bytes.len() != #id.len() {
-        //                 panic!("Length mismatch");
-        //             }
-        //             let mut out = [0u8; #id.len()];
-        //             out.copy_from_slice(&bytes);
-        //             out
-        //         }
-        //     };
-        //     quote! { #id: #temp, }
-        // }
+        syn::Type::Array(array) => {
+            let len = quote! { #id.len() };
+            let temp = quote! {
+                let bytes = bytes::Bytes::from(#single()?);
+                if bytes.len() != #len {
+                    panic!("Length mismatch");
+                }
+                let mut out = [0u8; #len];
+                out.copy_from_slice(&bytes);
+                out
+            };
+            quote! { #id: #temp, }
+        }
         syn::Type::Path(path) => {
             let ident = &path
                 .path
