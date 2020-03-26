@@ -29,7 +29,7 @@ pub fn decode_field(index: usize, field: &syn::Field, quotes: ParseQuotes) -> To
 
     match &field.ty {
         // FIXME
-        syn::Type::Array(array) => {
+        syn::Type::Array(_array) => {
             let len = quote! { #id.len() };
             let temp = quote! {
                 let bytes = bytes::Bytes::from(#single()?);
