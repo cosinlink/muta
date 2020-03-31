@@ -8,7 +8,6 @@ pub fn encode_field(index: usize, field: &syn::Field) -> TokenStream {
         let index = syn::Index::from(index);
         quote! { #index }
     };
-
     let id = quote! { self.#ident };
 
     match &field.ty {

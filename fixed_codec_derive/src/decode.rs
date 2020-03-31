@@ -28,11 +28,10 @@ pub fn decode_field(index: usize, field: &syn::Field, quotes: ParseQuotes) -> To
     let list = quotes.list;
 
     match &field.ty {
-        // FIXME
         syn::Type::Array(_array) => {
             let len = quote! { #id.len() };
             let temp = quote! {
-                let bytes = bytes::Bytes::from(#single()?);
+                let bytes = bytes::Bytes::from(#single(#index)?);
                 if bytes.len() != #len {
                     panic!("Length mismatch");
                 }
