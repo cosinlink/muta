@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use crate::decode::{decode_field, decode_parse_quotes};
+use crate::decode::{decode_field, decode_parse_quotes, decode_unnamed_field};
 use crate::encode::encode_field;
 
 pub fn impl_fixed_codec(ast: syn::DeriveInput) -> TokenStream {
@@ -17,7 +17,7 @@ pub fn impl_fixed_codec(ast: syn::DeriveInput) -> TokenStream {
     let impl_muta = quote! {
         impl protocol::fixed_codec::FixedCodec for #name {
             fn encode_fixed(&self) -> ProtocolResult<bytes::Bytes> {
-                Ok(bytes::Bytes::from(rlp::encode(&self)))
+                Ok(bytes::Bytes::from(rlp::encode(self)))
             }
 
             fn decode_fixed(bytes: bytes::Bytes) -> ProtocolResult<Self> {
@@ -61,19 +61,40 @@ fn impl_encode(name: &syn::Ident, body: &syn::DataStruct) -> TokenStream {
 }
 
 pub fn impl_decode(name: &syn::Ident, body: &syn::DataStruct) -> TokenStream {
-    let stmts = body
-        .fields
-        .iter()
-        .enumerate()
-        .map(|(i, field)| decode_field(i, field, decode_parse_quotes()))
-        .collect::<Vec<_>>();
+    let decoded = match &body.fields {
+        syn::Fields::Named(_) => {
+            let stmts = body
+                .fields
+                .iter()
+                .enumerate()
+                .map(|(i, field)| decode_field(i, field, decode_parse_quotes()))
+                .collect::<Vec<_>>();
+
+            quote! {
+                #name {
+                   #(#stmts)*
+                }
+            }
+        }
+        syn::Fields::Unnamed(_) => {
+            let stmts = body
+                .fields
+                .iter()
+                .enumerate()
+                .map(|(i, field)| decode_unnamed_field(i, field, decode_parse_quotes()))
+                .collect::<Vec<_>>();
+
+            quote! {
+                #name(#(#stmts)*)
+            }
+        }
+        _ => panic!("unit struct or unit variant such as None isn't supported"),
+    };
 
     quote! {
         impl rlp::Decodable for #name {
             fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
-                let result = #name {
-                    #(#stmts)*
-                };
+                let result = #decoded;
                 Ok(result)
             }
         }

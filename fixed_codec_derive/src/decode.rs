@@ -15,6 +15,64 @@ pub fn decode_parse_quotes() -> ParseQuotes {
     }
 }
 
+pub fn decode_unnamed_field(index: usize, field: &syn::Field, quotes: ParseQuotes) -> TokenStream {
+    let index = quote! { #index };
+    let single = quotes.single;
+    let list = quotes.list;
+
+    match &field.ty {
+        syn::Type::Array(array) => {
+            let len = &array.len;
+
+            let bytes = if quotes.takes_index {
+                quote! { rlp.val_at::<Vec<u8>>(#index)? }
+            } else {
+                quote! { rlp.val_at::<Vec<u8>>()? }
+            };
+
+            quote! { {
+                let bytes: Vec<u8> = #bytes;
+                if bytes.len() != #len {
+                    panic!("Length mismatch, got {}", bytes.len());
+                }
+
+                let mut out = [0u8; #len];
+                out.copy_from_slice(&bytes);
+                out
+            }, }
+        }
+        syn::Type::Path(path) => {
+            let ident = &path
+                .path
+                .segments
+                .first()
+                .expect("there must be at least 1 segment")
+                .ident;
+            let ident_type = ident.to_string();
+            if ident_type == "Vec" {
+                if quotes.takes_index {
+                    quote! { #list(#index)?, }
+                } else {
+                    quote! { #list()?, }
+                }
+            } else if ident_type == "Bytes" {
+                if quotes.takes_index {
+                    let temp = quote! { #single(#index)? };
+                    quote! { bytes::Bytes::from(#temp), }
+                } else {
+                    let temp = quote! { #single()? };
+                    quote! { bytes::Bytes::from(#temp), }
+                }
+            } else if quotes.takes_index {
+                quote! { #single(#index)?, }
+            } else {
+                quote! { #single()?, }
+            }
+        }
+        _ => panic!("fixed_codec_derive not supported"),
+    }
+}
+
 pub fn decode_field(index: usize, field: &syn::Field, quotes: ParseQuotes) -> TokenStream {
     let id = if let Some(ident) = &field.ident {
         quote! { #ident }
@@ -28,18 +86,25 @@ pub fn decode_field(index: usize, field: &syn::Field, quotes: ParseQuotes) -> To
     let list = quotes.list;
 
     match &field.ty {
-        syn::Type::Array(_array) => {
-            let len = quote! { #id.len() };
-            let temp = quote! {
-                let bytes = bytes::Bytes::from(#single(#index)?);
+        syn::Type::Array(array) => {
+            let len = &array.len;
+
+            let bytes = if quotes.takes_index {
+                quote! { rlp.val_at::<Vec<u8>>(#index)? }
+            } else {
+                quote! { rlp.val_at::<Vec<u8>>()? }
+            };
+
+            quote! { #id: {
+                let bytes: Vec<u8> = #bytes;
                 if bytes.len() != #len {
-                    panic!("Length mismatch");
+                    panic!("Length mismatch, got {}", bytes.len());
                 }
+
                 let mut out = [0u8; #len];
                 out.copy_from_slice(&bytes);
                 out
-            };
-            quote! { #id: #temp, }
+            }, }
         }
         syn::Type::Path(path) => {
             let ident = &path

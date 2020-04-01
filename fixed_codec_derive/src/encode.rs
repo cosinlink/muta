@@ -12,10 +12,9 @@ pub fn encode_field(index: usize, field: &syn::Field) -> TokenStream {
 
     match &field.ty {
         syn::Type::Array(_array) => {
-            let bytes = quote! { bytes::BytesMut::from(&id).freeze().as_ref().to_vec() };
+            let bytes = quote! { #id.to_vec() };
             quote! { stream.append(&#bytes); }
         }
-
         syn::Type::Path(path) => {
             let top_segment = path
                 .path
