@@ -1,4 +1,4 @@
-use bytes::BytesMut;
+use bytes::{Bytes, BytesMut};
 use fixed_codec_derive::MutaFixedCodec;
 use rand::random;
 
@@ -9,7 +9,7 @@ const HASH_LEN: usize = 32;
 type JsonString = String;
 
 #[derive(Clone, Debug, MutaFixedCodec, PartialEq, Eq, Copy)]
-struct Hash([u8; HASH_LEN]);
+pub struct Hash([u8; HASH_LEN]);
 
 impl Hash {
     fn new() -> Self {
@@ -20,31 +20,57 @@ impl Hash {
     }
 }
 
-// #[derive(Clone, Debug, FixedCodec)]
-// pub struct SignedTransaction {
-//     pub raw:       JsonString,
-//     pub tx_hash:   Hash,
-//     pub pubkey:    Bytes,
-//     pub signature: Bytes,
-// }
+#[derive(Clone, Debug, MutaFixedCodec, PartialEq, Eq)]
+pub struct Hex(String);
+
+impl Hex {
+    fn new() -> Self {
+        let temp = "0x".to_owned() + &String::from("muta-dev");
+        Self(temp)
+    }
+}
 
 #[derive(Clone, Debug, MutaFixedCodec, PartialEq, Eq)]
-pub struct Foo {
-    pub a: u64,
-    pub b: u64,
+pub struct SignedTransaction {
+    pub raw:       JsonString,
+    pub tx_hash:   Hash,
+    pub pubkey:    Bytes,
+    pub signature: Bytes,
+}
+
+impl SignedTransaction {
+    fn new() -> Self {
+        SignedTransaction {
+            raw:       JsonString::from("muta-dev"),
+            tx_hash:   Hash::new(),
+            pubkey:    random_bytes(32),
+            signature: random_bytes(64),
+        }
+    }
+}
+
+fn random_bytes(len: usize) -> Bytes {
+    let temp = (0..len).map(|_| random::<u8>()).collect::<Vec<_>>();
+    Bytes::from(temp)
 }
 
 #[test]
 fn test_hash() {
     let data = Hash::new();
-    // let data = Foo { a: 1, b: 2 };
     assert_eq!(
         data,
         FixedCodec::decode_fixed(data.encode_fixed().unwrap()).unwrap()
     );
 
-    // assert_eq!(
-    //     Foo::decode_fixed(data.encode_fixed().unwrap()).unwrap(),
-    //     data
-    // );
+    let data = SignedTransaction::new();
+    assert_eq!(
+        data,
+        FixedCodec::decode_fixed(data.encode_fixed().unwrap()).unwrap()
+    );
+
+    let data = Hex::new();
+    assert_eq!(
+        data,
+        FixedCodec::decode_fixed(data.encode_fixed().unwrap()).unwrap()
+    );
 }

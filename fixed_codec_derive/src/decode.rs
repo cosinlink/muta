@@ -2,16 +2,14 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 pub struct ParseQuotes {
-    single:      TokenStream,
-    list:        TokenStream,
-    takes_index: bool,
+    single: TokenStream,
+    list:   TokenStream,
 }
 
 pub fn decode_parse_quotes() -> ParseQuotes {
     ParseQuotes {
-        single:      quote! { rlp.val_at },
-        list:        quote! { rlp.list_at },
-        takes_index: true,
+        single: quote! { rlp.val_at },
+        list:   quote! { rlp.list_at },
     }
 }
 
@@ -23,12 +21,7 @@ pub fn decode_unnamed_field(index: usize, field: &syn::Field, quotes: ParseQuote
     match &field.ty {
         syn::Type::Array(array) => {
             let len = &array.len;
-
-            let bytes = if quotes.takes_index {
-                quote! { rlp.val_at::<Vec<u8>>(#index)? }
-            } else {
-                quote! { rlp.val_at::<Vec<u8>>()? }
-            };
+            let bytes = quote! { rlp.val_at::<Vec<u8>>(#index)? };
 
             quote! { {
                 let bytes: Vec<u8> = #bytes;
@@ -50,23 +43,18 @@ pub fn decode_unnamed_field(index: usize, field: &syn::Field, quotes: ParseQuote
                 .ident;
             let ident_type = ident.to_string();
             if ident_type == "Vec" {
-                if quotes.takes_index {
-                    quote! { #list(#index)?, }
-                } else {
-                    quote! { #list()?, }
-                }
+                quote! { #list(#index)?, }
             } else if ident_type == "Bytes" {
-                if quotes.takes_index {
-                    let temp = quote! { #single(#index)? };
-                    quote! { bytes::Bytes::from(#temp), }
-                } else {
-                    let temp = quote! { #single()? };
-                    quote! { bytes::Bytes::from(#temp), }
-                }
-            } else if quotes.takes_index {
-                quote! { #single(#index)?, }
+                quote! { bytes::Bytes::from(rlp.val_at::<Vec<u8>>(#index)?), }
+            } else if ident_type == "String" {
+                let string = quote! { rlp.val_at::<String>(#index)? };
+                quote! { {
+                    let string: String = #string;
+                    let ret = "0x".to_owned() + string.as_str();
+                    ret
+                }, }
             } else {
-                quote! { #single()?, }
+                quote! { #single(#index)?, }
             }
         }
         _ => panic!("fixed_codec_derive not supported"),
@@ -88,12 +76,7 @@ pub fn decode_field(index: usize, field: &syn::Field, quotes: ParseQuotes) -> To
     match &field.ty {
         syn::Type::Array(array) => {
             let len = &array.len;
-
-            let bytes = if quotes.takes_index {
-                quote! { rlp.val_at::<Vec<u8>>(#index)? }
-            } else {
-                quote! { rlp.val_at::<Vec<u8>>()? }
-            };
+            let bytes = quote! { rlp.val_at::<Vec<u8>>(#index)? };
 
             quote! { #id: {
                 let bytes: Vec<u8> = #bytes;
@@ -115,23 +98,11 @@ pub fn decode_field(index: usize, field: &syn::Field, quotes: ParseQuotes) -> To
                 .ident;
             let ident_type = ident.to_string();
             if ident_type == "Vec" {
-                if quotes.takes_index {
-                    quote! { #id: #list(#index)?, }
-                } else {
-                    quote! { #id: #list()?, }
-                }
+                quote! { #id: #list(#index)?, }
             } else if ident_type == "Bytes" {
-                if quotes.takes_index {
-                    let temp = quote! { #single(#index)? };
-                    quote! { #id: bytes::Bytes::from(#temp), }
-                } else {
-                    let temp = quote! { #single()? };
-                    quote! { #id: bytes::Bytes::from(#temp), }
-                }
-            } else if quotes.takes_index {
-                quote! { #id: #single(#index)?, }
+                quote! { #id: bytes::Bytes::from(rlp.val_at::<Vec<u8>>(#index)?), }
             } else {
-                quote! { #id: #single()?, }
+                quote! { #id: #single(#index)?, }
             }
         }
         _ => panic!("fixed_codec_derive not supported"),
