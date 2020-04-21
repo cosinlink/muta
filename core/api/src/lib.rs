@@ -169,12 +169,15 @@ impl Mutation {
         let pubkey = privkey.pub_key();
         let hash_value = HashValue::try_from(tx_hash.as_bytes().as_ref())?;
         let signature = privkey.sign_message(&hash_value);
+        let sender = protocol::types::Address::from_pubkey_bytes(pubkey.to_bytes())?;
 
         let stx = protocol::types::SignedTransaction {
-            raw:       raw_tx,
-            tx_hash:   tx_hash.clone(),
-            signature: signature.to_bytes(),
-            pubkey:    pubkey.to_bytes(),
+            raw:            raw_tx,
+            tx_hash:        tx_hash.clone(),
+            signature:      signature.to_bytes(),
+            pubkey:         pubkey.to_bytes(),
+            sender:         sender.clone(),
+            signature_type: 0,
         };
         state_ctx
             .adapter

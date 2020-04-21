@@ -87,11 +87,16 @@ pub fn to_signed_transaction(
     let signature: &[u8] =
         &hex::decode(encryption.signature.as_hex()?).map_err(SchemaError::from)?;
 
+    let pubkey_bytes = bytes::BytesMut::from(pubkey).freeze();
+    let sender = protocol::types::Address::from_pubkey_bytes(pubkey_bytes.clone())?;
+
     Ok(protocol::types::SignedTransaction {
-        raw:       to_transaction(raw)?,
-        tx_hash:   protocol::types::Hash::from_hex(&encryption.tx_hash.as_hex())?,
-        pubkey:    bytes::BytesMut::from(pubkey).freeze(),
+        raw: to_transaction(raw)?,
+        tx_hash: protocol::types::Hash::from_hex(&encryption.tx_hash.as_hex())?,
+        pubkey: pubkey_bytes,
         signature: bytes::BytesMut::from(signature).freeze(),
+        sender,
+        signature_type: 0,
     })
 }
 

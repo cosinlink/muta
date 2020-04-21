@@ -4,7 +4,10 @@ use bytes::Bytes;
 use prost::Message;
 
 use crate::{
-    codec::{primitive::Hash, CodecError, ProtocolCodecSync},
+    codec::{
+        primitive::{Address, Hash},
+        CodecError, ProtocolCodecSync,
+    },
     field, impl_default_bytes_codec_for,
     types::primitive as protocol_primitive,
     ProtocolError, ProtocolResult,
@@ -56,6 +59,12 @@ pub struct SignedTransaction {
 
     #[prost(bytes, tag = "4")]
     pub signature: Vec<u8>,
+
+    #[prost(message, tag = "5")]
+    pub sender: Option<Address>,
+
+    #[prost(uint64, tag = "6")]
+    pub signature_type: u64,
 }
 
 // #################
@@ -135,12 +144,14 @@ impl From<transaction::SignedTransaction> for SignedTransaction {
     fn from(stx: transaction::SignedTransaction) -> SignedTransaction {
         let raw = RawTransaction::from(stx.raw);
         let tx_hash = Hash::from(stx.tx_hash);
-
+        let sender = Address::from(stx.sender);
         SignedTransaction {
-            raw:       Some(raw),
-            tx_hash:   Some(tx_hash),
-            pubkey:    stx.pubkey.to_vec(),
-            signature: stx.signature.to_vec(),
+            raw:            Some(raw),
+            tx_hash:        Some(tx_hash),
+            pubkey:         stx.pubkey.to_vec(),
+            signature:      stx.signature.to_vec(),
+            sender:         Some(sender),
+            signature_type: stx.signature_type as u64,
         }
     }
 }
@@ -151,12 +162,15 @@ impl TryFrom<SignedTransaction> for transaction::SignedTransaction {
     fn try_from(stx: SignedTransaction) -> Result<transaction::SignedTransaction, Self::Error> {
         let raw = field!(stx.raw, "SignedTransaction", "raw")?;
         let tx_hash = field!(stx.tx_hash, "SignedTransaction", "tx_hash")?;
+        let sender = field!(stx.sender, "SignedTransaction", "sender")?;
 
         let stx = transaction::SignedTransaction {
-            raw:       transaction::RawTransaction::try_from(raw)?,
-            tx_hash:   protocol_primitive::Hash::try_from(tx_hash)?,
-            pubkey:    Bytes::from(stx.pubkey),
-            signature: Bytes::from(stx.signature),
+            raw:            transaction::RawTransaction::try_from(raw)?,
+            tx_hash:        protocol_primitive::Hash::try_from(tx_hash)?,
+            pubkey:         Bytes::from(stx.pubkey),
+            signature:      Bytes::from(stx.signature),
+            sender:         protocol_primitive::Address::try_from(sender)?,
+            signature_type: stx.signature_type as u8,
         };
 
         Ok(stx)

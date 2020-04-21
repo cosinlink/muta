@@ -53,11 +53,13 @@ impl rlp::Decodable for RawTransaction {
 
 impl rlp::Encodable for SignedTransaction {
     fn rlp_append(&self, s: &mut rlp::RlpStream) {
-        s.begin_list(4)
+        s.begin_list(6)
             .append(&self.pubkey.to_vec())
             .append(&self.raw)
             .append(&self.signature.to_vec())
-            .append(&self.tx_hash);
+            .append(&self.tx_hash)
+            .append(&self.sender)
+            .append(&self.signature_type);
     }
 }
 
@@ -71,12 +73,16 @@ impl rlp::Decodable for SignedTransaction {
         let raw: RawTransaction = rlp::decode(r.at(1)?.as_raw())?;
         let signature = BytesMut::from(r.at(2)?.data()?).freeze();
         let tx_hash = rlp::decode(r.at(3)?.as_raw())?;
+        let sender = rlp::decode(r.at(4)?.as_raw())?;
+        let signature_type = r.at(5)?.as_val()?;
 
         Ok(SignedTransaction {
             raw,
             tx_hash,
             pubkey,
             signature,
+            sender,
+            signature_type,
         })
     }
 }

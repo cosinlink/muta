@@ -1,6 +1,6 @@
 use bytes::Bytes;
 
-use crate::types::primitive::{Hash, JsonString};
+use crate::types::primitive::{Address, Hash, JsonString};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RawTransaction {
@@ -21,8 +21,10 @@ pub struct TransactionRequest {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SignedTransaction {
-    pub raw:       RawTransaction,
-    pub tx_hash:   Hash,
-    pub pubkey:    Bytes,
-    pub signature: Bytes,
+    pub raw:            RawTransaction,
+    pub tx_hash:        Hash,
+    pub pubkey:         Bytes,
+    pub signature:      Bytes,
+    pub sender:         Address,
+    pub signature_type: u8,
 }
