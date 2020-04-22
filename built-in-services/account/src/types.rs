@@ -57,6 +57,14 @@ pub struct Account {
     pub weight:        u8,
 }
 
+#[derive(Deserialize, Serialize, Clone, Debug, Default)]
+pub struct Witness {
+    pub_keys:  Vec<Hex>,
+    signatures:  Vec<Hex>,
+    signature_type:  u8,
+    sender:  Address,
+}
+
 impl rlp::Encodable for Account {
     fn rlp_append(&self, s: &mut rlp::RlpStream) {
         s.begin_list(4)

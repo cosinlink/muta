@@ -1,16 +1,22 @@
-use crate::types::{
-    Account, GenerateAccountPayload, GenerateAccountResponse, GetAccountPayload, PayloadAccount,
-    Permission, VerifyPayload, VerifyResponse, ACCOUNT_TYPE_PUBLIC_KEY, MAX_PERMISSION_ACCOUNTS,
-};
-use binding_macro::{cycles, service};
 use bytes::Bytes;
 use hasher::{Hasher, HasherKeccak};
+
+use binding_macro::{cycles, service};
 use protocol::traits::{ExecutorParams, ServiceResponse, ServiceSDK};
 use protocol::types::{Address, Hash, ServiceContext};
+
+use crate::types::{
+    Account, ACCOUNT_TYPE_PUBLIC_KEY, GenerateAccountPayload, GenerateAccountResponse, GetAccountPayload,
+    MAX_PERMISSION_ACCOUNTS, PayloadAccount, Permission, VerifyPayload, VerifyResponse,
+    Witness,
+};
 
 #[cfg(test)]
 mod tests;
 pub mod types;
+
+const SINGLE_SIGNATURE: u8 = 0;
+const MULTI_SIGNATURE: u8 = 1;
 
 pub struct AccountService<SDK> {
     sdk: SDK,
@@ -24,18 +30,30 @@ impl<SDK: ServiceSDK> AccountService<SDK> {
 
     #[cycles(100_00)]
     #[read]
-    fn verify(
-        &self,
-        ctx: ServiceContext,
-        payload: VerifyPayload,
-    ) -> ServiceResponse<VerifyResponse> {
+    pub fn verify(&self, witness: Bytes) -> bool {
+        let wit = from_witness_bytes(witness);
+        if !check_valid(&wit) {
+            return false;
+        }
+
+        if wit.signature_type == SINGLE_SIGNATURE {
 
 
-        ServiceResponse::<VerifyResponse>::from_error(
-            110,
-            "accounts length must be [1,16]".to_owned(),
-        )
+        }
+
+        true
     }
+
+    pub fn check_valid(wit : &Witness) -> bool {
+        true
+    }
+
+    pub fn from_witness_bytes(witness: Bytes) -> Witness {
+        Witness {
+
+        }
+    }
+
 
     #[cycles(100_00)]
     #[read]
@@ -48,7 +66,7 @@ impl<SDK: ServiceSDK> AccountService<SDK> {
             .sdk
             .get_account_value(&payload.user, &0u8)
             .unwrap_or(Permission {
-                accounts:  Vec::<Account>::new(),
+                accounts: Vec::<Account>::new(),
                 threshold: 0,
             });
 
@@ -63,7 +81,7 @@ impl<SDK: ServiceSDK> AccountService<SDK> {
         for item in &permission.accounts {
             accounts.push(PayloadAccount {
                 address: item.address.clone(),
-                weight:  item.weight,
+                weight: item.weight,
             });
         }
 
@@ -95,10 +113,10 @@ impl<SDK: ServiceSDK> AccountService<SDK> {
         for item in &payload.accounts {
             weight_all += item.weight;
             accounts.push(Account {
-                address:       item.address.clone(),
-                account_type:  ACCOUNT_TYPE_PUBLIC_KEY,
+                address: item.address.clone(),
+                account_type: ACCOUNT_TYPE_PUBLIC_KEY,
                 permission_id: 0,
-                weight:        item.weight,
+                weight: item.weight,
             });
         }
 
@@ -110,7 +128,6 @@ impl<SDK: ServiceSDK> AccountService<SDK> {
         }
 
         let tx_hash = ctx.get_tx_hash().unwrap();
-
         let keccak = HasherKeccak::new();
         let addr_hash = Hash::from_bytes(Bytes::from(keccak.digest(&tx_hash.as_bytes())));
         if addr_hash.is_err() {
@@ -127,21 +144,18 @@ impl<SDK: ServiceSDK> AccountService<SDK> {
                 "generate address from tx_hash failed".to_owned(),
             );
         }
-
         let address = addr.unwrap();
         let permission = Permission {
             accounts,
             threshold: payload.threshold,
         };
-
         self.sdk.set_account_value(&address, 0u8, permission);
 
         let response = GenerateAccountResponse {
-            address:   address.clone(),
-            accounts:  payload.accounts,
+            address: address.clone(),
+            accounts: payload.accounts,
             threshold: payload.threshold,
         };
-
         ServiceResponse::<GenerateAccountResponse>::from_succeed(response)
     }
 }
