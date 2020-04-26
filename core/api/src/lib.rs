@@ -168,13 +168,15 @@ impl Mutation {
         let privkey = Secp256k1PrivateKey::try_from(input_privkey.to_vec()?.as_ref())?;
         let pubkey = privkey.pub_key();
         let hash_value = HashValue::try_from(tx_hash.as_bytes().as_ref())?;
-        let signature = privkey.sign_message(&hash_value);
+        let witness = protocol::types::Bytes::new();
+        let sender = protocol::types::Address::from_pubkey_bytes(pubkey.to_bytes());
 
+        // TODO serialize Witness to Bytes
         let stx = protocol::types::SignedTransaction {
-            raw:       raw_tx,
-            tx_hash:   tx_hash.clone(),
-            signature: signature.to_bytes(),
-            pubkey:    pubkey.to_bytes(),
+            raw: raw_tx,
+            tx_hash: tx_hash.clone(),
+            witness,
+            sender: Some(sender.unwrap()),
         };
         state_ctx
             .adapter

@@ -11,9 +11,8 @@ pub const MAX_PERMISSION_ACCOUNTS: u8 = 16;
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct VerifyPayload {
-    pub hash:    Hash,
-    pub sig:     Hex,
-    pub pub_key: Hex,
+    pub tx_hash: Hash,
+    pub witness: Hex,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
@@ -55,6 +54,26 @@ pub struct Account {
     pub account_type:  u8,
     pub permission_id: u8,
     pub weight:        u8,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, Default)]
+pub struct Witness {
+    pub_keys:       Vec<Hex>,
+    signatures:     Vec<Hex>,
+    signature_type: u8,
+    sender:         Address,
+}
+
+impl Witness {
+    pub fn new() -> Self {
+        Self {
+            pub_keys:       Vec::<Hex>::new(),
+            signatures:     Vec::<Hex>::new(),
+            signature_type: 0,
+            sender:         Address::from_hex("0x0000000000000000000000000000000000000000")
+                .unwrap(),
+        }
+    }
 }
 
 impl rlp::Encodable for Account {

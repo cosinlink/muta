@@ -2,10 +2,11 @@ use bytes::Bytes;
 use muta_codec_derive::RlpFixedCodec;
 
 use crate::fixed_codec::{FixedCodec, FixedCodecError};
-use crate::types::primitive::{Hash, JsonString};
+use crate::types::primitive::{Address, Hash, JsonString};
 use crate::ProtocolResult;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct RawTransaction {
     pub chain_id:     Hash,
     pub cycles_price: u64,
@@ -15,17 +16,17 @@ pub struct RawTransaction {
     pub timeout:      u64,
 }
 
-#[derive(RlpFixedCodec, Clone, Debug, PartialEq, Eq)]
+#[derive(RlpFixedCodec, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct TransactionRequest {
     pub method:       String,
     pub service_name: String,
     pub payload:      JsonString,
 }
 
-#[derive(RlpFixedCodec, Clone, Debug, PartialEq, Eq)]
+#[derive(RlpFixedCodec, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct SignedTransaction {
-    pub raw:       RawTransaction,
-    pub tx_hash:   Hash,
-    pub pubkey:    Bytes,
-    pub signature: Bytes,
+    pub raw:     RawTransaction,
+    pub tx_hash: Hash,
+    pub witness: Bytes,
+    pub sender:  Option<Address>,
 }

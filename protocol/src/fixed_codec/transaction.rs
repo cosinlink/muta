@@ -1,7 +1,7 @@
 use bytes::BytesMut;
 
 use crate::fixed_codec::{FixedCodec, FixedCodecError};
-use crate::types::{Hash, RawTransaction, TransactionRequest};
+use crate::types::{Address, Hash, RawTransaction, TransactionRequest};
 use crate::ProtocolResult;
 
 impl rlp::Encodable for RawTransaction {
@@ -48,6 +48,16 @@ impl rlp::Decodable for RawTransaction {
 }
 
 impl FixedCodec for RawTransaction {
+    fn encode_fixed(&self) -> ProtocolResult<bytes::Bytes> {
+        Ok(bytes::Bytes::from(rlp::encode(self)))
+    }
+
+    fn decode_fixed(bytes: bytes::Bytes) -> ProtocolResult<Self> {
+        Ok(rlp::decode(bytes.as_ref()).map_err(FixedCodecError::from)?)
+    }
+}
+
+impl FixedCodec for Option<Address> {
     fn encode_fixed(&self) -> ProtocolResult<bytes::Bytes> {
         Ok(bytes::Bytes::from(rlp::encode(self)))
     }

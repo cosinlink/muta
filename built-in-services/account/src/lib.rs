@@ -1,16 +1,24 @@
-use crate::types::{
-    Account, GenerateAccountPayload, GenerateAccountResponse, GetAccountPayload, PayloadAccount,
-    Permission, VerifyPayload, VerifyResponse, ACCOUNT_TYPE_PUBLIC_KEY, MAX_PERMISSION_ACCOUNTS,
-};
-use binding_macro::{cycles, service};
 use bytes::Bytes;
 use hasher::{Hasher, HasherKeccak};
+
+use binding_macro::{cycles, service};
 use protocol::traits::{ExecutorParams, ServiceResponse, ServiceSDK};
-use protocol::types::{Address, Hash, ServiceContext};
+use protocol::types::{Address, Hash, ServiceContext, SignedTransaction};
+use serde::{Deserialize, Serialize};
+use serde_json::Result;
+
+use crate::types::{
+    Account, GenerateAccountPayload, GenerateAccountResponse, GetAccountPayload, PayloadAccount,
+    Permission, VerifyPayload, VerifyResponse, Witness, ACCOUNT_TYPE_PUBLIC_KEY,
+    MAX_PERMISSION_ACCOUNTS,
+};
 
 #[cfg(test)]
 mod tests;
 pub mod types;
+
+const SINGLE_SIGNATURE: u8 = 0;
+const MULTI_SIGNATURE: u8 = 1;
 
 pub struct AccountService<SDK> {
     sdk: SDK,
@@ -22,17 +30,20 @@ impl<SDK: ServiceSDK> AccountService<SDK> {
         Self { sdk }
     }
 
-    #[cycles(100_00)]
-    #[read]
-    fn verify(
+    pub fn verify_signature(
         &self,
-        ctx: ServiceContext,
+        _ctx: ServiceContext,
         payload: VerifyPayload,
     ) -> ServiceResponse<VerifyResponse> {
-        ServiceResponse::<VerifyResponse>::from_error(
-            110,
-            "accounts length must be [1,16]".to_owned(),
-        )
+        let wit_str = payload.witness.clone().as_string().as_str();
+
+        let wit: Witness = serde_json::from_str(wit_str).unwrap_or();
+
+        ServiceResponse::<VerifyResponse>::from_error(112, "witness not valid".to_owned())
+    }
+
+    pub fn check_valid(wit: &Witness) -> bool {
+        true
     }
 
     #[cycles(100_00)]
@@ -109,7 +120,6 @@ impl<SDK: ServiceSDK> AccountService<SDK> {
         }
 
         let tx_hash = ctx.get_tx_hash().unwrap();
-
         let keccak = HasherKeccak::new();
         let addr_hash = Hash::from_bytes(Bytes::from(keccak.digest(&tx_hash.as_bytes())));
         if addr_hash.is_err() {
@@ -126,13 +136,11 @@ impl<SDK: ServiceSDK> AccountService<SDK> {
                 "generate address from tx_hash failed".to_owned(),
             );
         }
-
         let address = addr.unwrap();
         let permission = Permission {
             accounts,
             threshold: payload.threshold,
         };
-
         self.sdk.set_account_value(&address, 0u8, permission);
 
         let response = GenerateAccountResponse {
@@ -140,7 +148,6 @@ impl<SDK: ServiceSDK> AccountService<SDK> {
             accounts:  payload.accounts,
             threshold: payload.threshold,
         };
-
         ServiceResponse::<GenerateAccountResponse>::from_succeed(response)
     }
 }
